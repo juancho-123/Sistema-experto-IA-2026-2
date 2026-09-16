@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Aterrizaje · Simulador básico</title>
+<style>
+.config{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}.config label{color:#b2c1d3;font-size:14px;display:flex;gap:6px;align-items:center}.config input{width:76px;padding:7px;background:#111d2c;border:1px solid #43566e;border-radius:6px;color:#eaf0f7;font:inherit}
+*{box-sizing:border-box}body{margin:0;background:#0b1220;color:#eaf0f7;font:16px system-ui,sans-serif}main{max-width:1000px;margin:auto;padding:24px}h1{font-size:28px;margin:0 0 8px}p{color:#b2c1d3;line-height:1.5}.top{display:flex;gap:20px;justify-content:space-between;align-items:center;flex-wrap:wrap}.buttons{display:flex;gap:8px;flex-wrap:wrap}button{font:inherit;padding:11px 19px;border:1px solid #587089;border-radius:8px;background:#1a2a40;color:#eaf0f7;cursor:pointer;min-height:44px}button.primary{background:#85e4cb;color:#08241e;border-color:#85e4cb;font-weight:600}button:disabled{opacity:.45;cursor:default}.stats{display:flex;gap:12px 30px;flex-wrap:wrap;padding:18px 0;font-variant-numeric:tabular-nums}.stats span{color:#b2c1d3}.stats b{color:#fff}canvas{display:block;width:100%}#scene{height:410px;border-radius:10px;background:#142b42}#chart{height:140px}.legend{display:flex;gap:20px;flex-wrap:wrap;font-size:14px;color:#b2c1d3;margin:12px 0}.legend .good{color:#85e4cb}.legend .bad{color:#ffa19a}#status{min-height:48px;margin:18px 0 6px;color:#eaf0f7;font-size:17px}h2{font-size:17px;margin-top:16px}.hint{font-size:14px}details{border-top:1px solid #334357;margin-top:22px;padding-top:15px;font-size:14px}summary{cursor:pointer;color:#c5d4e5}a{color:#85e4cb}#failure{color:#ffb9b2}progress{width:100%;height:6px;accent-color:#85e4cb}button:focus-visible,summary:focus-visible{outline:3px solid #b1efff;outline-offset:3px}@media(max-width:500px){main{padding:16px}h1{font-size:23px}#scene{height:320px}.stats{gap:10px 18px;font-size:14px}.buttons{width:100%}.buttons button{flex:1;padding:10px}}
+</style></head><body><main>
+<div class="top"><div><h1>Aprendiendo a aterrizar</h1><p style="margin:0">Observa cómo mejora una población de pilotos.</p></div><div class="buttons"><label style="color:#b2c1d3">Velocidad <select id="speed"><option value="0.5">0,5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select></label><button class="primary" id="start">Iniciar</button><button id="pause" disabled>Pausar</button><button id="reset" disabled>Reiniciar</button></div></div>
+<div class="config"><label>Pilotos <input id="population" type="number" value="80" min="10" max="200"></label><label>Generaciones <input id="generations" type="number" value="20" min="1" max="100"></label><label>Semilla <input id="seed" type="number" value="42" min="0" max="999999"></label><label>Cruce <input id="crossover" type="number" value="0.86" min="0" max="1" step="0.01"></label><label>Mutación por gen <input id="mutation" type="number" value="0.15" min="0" max="1" step="0.01"></label></div>
+<div class="stats"><span>Generación <b id="gen">— / 20</b></span><span>En vuelo <b id="active">0</b></span><span>Aterrizajes seguros <b id="safe">0</b></span><span>Fallidos <b id="failed">0</b></span></div>
+<canvas id="scene" role="img" aria-label="Naves descendiendo hacia una plataforma terrestre. Sus resultados aparecen al finalizar cada vuelo."></canvas>
+<div class="legend"><span>△ En vuelo</span><span class="good">✓ Aterrizaje seguro</span><span class="bad">× Intento fallido</span><span class="parent">★ Padres elegidos</span></div>
+<progress id="progress" value="0" max="1" aria-label="Avance del vuelo de esta generación"></progress>
+<p id="status" role="status" aria-live="polite">Pulsa Iniciar para ver la primera generación.</p>
+<p class="hint">Todo es automático. Cada generación se reproduce en 6 segundos, seguida de una breve pausa para ver sus resultados.</p>
+<div id="failure" role="alert"></div>
+<h2>Aterrizajes seguros por generación</h2><canvas id="chart" role="img" aria-label="Número de aterrizajes seguros de cada generación completada, de cero a ochenta"></canvas>
+<details><summary>¿Cómo aprenden los pilotos?</summary><p>Los pilotos iniciales tienen controles sin calibrar. Cada uno prueba su vuelo; después se evalúa su desempeño. El algoritmo selecciona padres por torneo, combina sus genes mediante cruce de un punto y aplica mutaciones. Conserva los dos mejores pilotos. La gráfica muestra resultados reales, que pueden subir o bajar entre generaciones.</p><p>Configuración fija: 80 pilotos, 20 generaciones, semilla 42, cruce 0,86 y mutación 0,15 por gen. Cada piloto tiene siete genes que regulan dirección, frenado y empuje. La generación inicial no se filtra por éxito ni se fuerza una generación ganadora. Reiniciar repite el mismo experimento para facilitar su comparación.</p><p>Modelo educativo 2D del descenso final: altura inicial de 500 m, desvío de 180 m, velocidad vertical de −12 m/s, gravedad de 9,81 m/s² y combustible equivalente a 40 s a máxima potencia. Aterrizaje seguro: desvío ≤ 20 m, velocidad horizontal ≤ 2 m/s, vertical ≤ 3 m/s e inclinación ≤ 10°. Se omiten reentrada orbital, resistencia atmosférica y dinámica de rotación. La vista tiene escalas horizontal y vertical distintas; las naves fuera de ella se indican en los bordes.</p><p>Fuentes conceptuales: <em>algoritmos_geneticos.pdf</em>, <em>ejemplos_AG_IA.docx</em> y <a href="https://fritz.ai/reproducing-images-using-a-genetic-algorithm-with-python/">el artículo de Fritz sobre algoritmos genéticos</a>.</p></details>
+</main>
+<script>/* Modelo educativo 2D. Sin dependencias. También ejecutable desde Node. */
+const Lander = (() => {
+ const ranges=[[-.3,.3],[-2.5,2.5],[.3,5],[-4,4],[5,50],[.08,.7],[0,16]];
+ const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+ function random(seed){let s=seed>>>0;return ()=>{s+=0x6D2B79F5;let t=s;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296;};}
+ function simulate(genes,cfg,trace=false){
+  let s={x:cfg.x,y:cfg.height,vx:0,vy:-12,fuel:cfg.fuel,t:0,angle:0,throttle:0}; const path=trace?[{...s}]:[]; const dt=.1;
+  for(let i=0;i<1200 && s.y>0;i++){
+   let desired=-Math.min(genes[4],genes[2]*Math.sqrt(Math.max(0,s.y)));
+   let ax=clamp(-genes[0]*s.x-genes[1]*s.vx,-8,8);
+   let ay=clamp(genes[6]+genes[3]*(desired-s.vy),0,22);
+   s.angle=clamp(Math.atan2(ax,Math.max(ay,.01)),-genes[5],genes[5]);
+   let thrust=clamp(Math.hypot(ax,ay),0,24);
+   thrust=Math.min(thrust,s.fuel*24/dt);s.throttle=thrust/24;
+   let old={...s};
+   s.vx+=(Math.sin(s.angle)*thrust+cfg.wind)*dt;s.vy+=(Math.cos(s.angle)*thrust-9.81)*dt;
+   s.x+=s.vx*dt;s.y+=s.vy*dt;s.fuel=Math.max(0,s.fuel-s.throttle*dt);s.t+=dt;
+   if(s.y<=0){const f=old.y/(old.y-s.y);for(const k of ['x','vx','vy','fuel','t'])s[k]=old[k]+f*(s[k]-old[k]);s.y=0;}
+   if(trace)path.push({...s});
+  }
+  const landed=s.y===0 && Math.abs(s.x)<=20 && Math.abs(s.vx)<=2 && Math.abs(s.vy)<=3 && Math.abs(s.angle)<=Math.PI/18;
+  const cost=2*Math.abs(s.x)+12*Math.abs(s.vx)+18*Math.abs(s.vy)+30*Math.abs(s.angle)+(s.y>0?2000+s.y:0);
+  const fitness=(landed?10000:0)+2000/(1+cost)+(landed?s.fuel:0);
+  return {genes:[...genes],fitness,landed,end:s,path};
+ }
+ // Distribución inicial de controladores sin calibrar; no se filtra por éxito.
+ const initialRanges=[[-.03,.03],[-.25,.25],[2,5],[-.4,.4],[20,50],[.08,.7],[0,3]];
+ function create(cfg){const rng=random(cfg.seed);let pop=Array.from({length:cfg.population},()=>initialRanges.map(([a,b])=>a+rng()*(b-a)));let gen=0,best=null,history=[];
+  function step(){const evaluated=pop.map(g=>simulate(g,cfg));const ranked=[...evaluated].sort((a,b)=>b.fitness-a.fitness);if(!best||ranked[0].fitness>best.fitness)best=ranked[0];history.push({gen,best:best.fitness,success:ranked.filter(r=>r.landed).length});
+   const next=ranked.slice(0,2).map(r=>r.genes.slice());
+   const select=()=>{let b=ranked[Math.floor(rng()*ranked.length)];for(let i=0;i<2;i++){let a=ranked[Math.floor(rng()*ranked.length)];if(a.fitness>b.fitness)b=a;}return b.genes;};
+   while(next.length<cfg.population){let a=select(),b=select(),cut=1+Math.floor(rng()*(ranges.length-1)),cross=rng()<cfg.crossover;next.push(a.map((v,j)=>{let x=cross&&j>=cut?b[j]:v;let [lo,hi]=ranges[j];if(rng()<cfg.mutation)x+=(rng()+rng()+rng()-1.5)*(hi-lo)*.2;return clamp(x,lo,hi);}));}pop=next;gen++;return {generation:gen,best,history,ranked,evaluated};
+  }return {step};
+ }return {simulate,create,ranges};
+})();
+if(typeof module!=='undefined')module.exports=Lander;
+</script>
+<script>
+(()=>{
+'use strict';
+const $=id=>document.getElementById(id);
+let cfg={height:500,x:180,wind:0,fuel:40,population:80,generations:20,crossover:.86,mutation:.15,seed:42};
+let runner=null,result=null,fleet=[],history=[],parents=[],phase='idle',paused=false,elapsed=0,hold=0,last=null,raf=0,duration=0,viewTime=0;
+function surface(id){const c=$(id),r=c.getBoundingClientRect(),d=Math.min(window.devicePixelRatio||1,2);if(c.width!==Math.round(r.width*d)||c.height!==Math.round(r.height*d)){c.width=Math.round(r.width*d);c.height=Math.round(r.height*d);}const g=c.getContext('2d');g.setTransform(d,0,0,d,0,0);g.clearRect(0,0,r.width,r.height);return [g,r.width,r.height];}
+function sample(f){return f.path[Math.min(f.path.length-1,Math.floor(viewTime/.1))];}
+function counts(){let safe=0,failed=0,active=0;for(const f of fleet){if(viewTime+1e-8<f.end.t)active++;else if(f.landed)safe++;else failed++;}return {safe,failed,active};}
+function paint(){const [g,w,h]=surface('scene'),left=48,right=w-20,ground=h-40,px=x=>left+(x+500)/1000*(right-left),py=y=>ground-y/650*(h-65);
+const sky=g.createLinearGradient(0,0,0,h);sky.addColorStop(0,'#102033');sky.addColorStop(1,'#25485f');g.fillStyle=sky;g.fillRect(0,0,w,h);g.font='12px system-ui';
+for(let y=0;y<=600;y+=100){g.strokeStyle='#ffffff16';g.beginPath();g.moveTo(left,py(y));g.lineTo(right,py(y));g.stroke();g.fillStyle='#bfcedc';g.fillText(y+' m',4,py(y)+4);}
+g.fillStyle='#233e35';g.fillRect(0,ground,w,h-ground);g.fillStyle='#85e4cb';g.fillRect(px(-20),ground-2,px(20)-px(-20),5);g.textAlign='center';g.fillText('Plataforma',px(0),ground+25);g.textAlign='left';
+g.save();g.beginPath();g.rect(left,5,right-left,ground-5);g.clip();
+let off=0;
+for(let i=0;i<fleet.length;i++){
+const f=fleet[i],ended=viewTime+1e-8>=f.end.t,s=ended?f.end:sample(f),isParent=ended&&parents.includes(i),color=isParent?'#ffd166':ended?(f.landed?'#85e4cb':'#ffa19a'):'#d8e7f2';
+g.strokeStyle=ended?(f.landed?'#85e4cb40':'#ffa19a22'):'#d8e7f218';g.lineWidth=1;g.beginPath();const until=Math.min(f.path.length-1,Math.floor(viewTime/.1));for(let j=0;j<=until;j+=6){const p=f.path[j];j?g.lineTo(px(p.x),py(p.y)):g.moveTo(px(p.x),py(p.y));}g.lineTo(px(s.x),py(s.y));g.stroke();
+let x=px(s.x),y=py(s.y)-5;const outside=x<left+6||x>right-6||y<12;if(outside)off++;x=Math.max(left+6,Math.min(right-6,x));y=Math.max(12,Math.min(ground-5,y));
+g.save();g.translate(x,y);g.strokeStyle=color;g.fillStyle=color;g.lineWidth=1.5;
+if(isParent){g.font='bold 17px system-ui';g.fillText('★',-7,4);}else if(ended){g.font='bold 15px system-ui';g.fillText(f.landed?'✓':'×',-5,3);}else{g.rotate(s.angle);g.beginPath();g.moveTo(0,-7);g.lineTo(4,5);g.lineTo(-4,5);g.closePath();g.stroke();if(s.throttle>.1){g.strokeStyle='#ffc57e';g.beginPath();g.moveTo(0,6);g.lineTo(0,9+s.throttle*6);g.stroke();}}
+g.restore();
+}
+g.restore();g.fillStyle='#c8d7e5';g.font='12px system-ui';g.fillText(fleet.length?`Tiempo simulado: ${viewTime.toFixed(1)} s`:'Altura inicial: 500 m',left+8,22);if(off)g.fillText(`${off} naves fuera de vista: marcadas en el borde`,left+8,40);
+if(!fleet.length){g.save();g.translate(px(180),py(500));g.strokeStyle='#d8e7f2';g.lineWidth=2;g.beginPath();g.moveTo(0,-13);g.lineTo(7,9);g.lineTo(-7,9);g.closePath();g.stroke();g.restore();}
+const c=counts();$('active').textContent=c.active;$('safe').textContent=c.safe;$('failed').textContent=c.failed;$('progress').value=duration?Math.min(viewTime/duration,1):0;
+}
+function chart(){const [g,w,h]=surface('chart'),l=35,r=w-12,b=h-30,t=12;g.font='12px system-ui';for(const n of [0,40,80]){let y=b-n/80*(b-t);g.fillStyle='#afc0d2';g.fillText(String(n),4,y+4);g.strokeStyle='#334357';g.beginPath();g.moveTo(l,y);g.lineTo(r,y);g.stroke();}const slot=(r-l)/20;for(let i=0;i<history.length;i++){const n=history[i].success,x=l+i*slot;g.fillStyle=n?'#85e4cb':'#7e90a5';g.fillRect(x+2,b-Math.max(2,n/80*(b-t)),Math.max(2,slot-4),Math.max(2,n/80*(b-t)));}g.fillStyle='#afc0d2';g.fillText('1',l,b+21);g.textAlign='right';g.fillText('Generación 20',r,b+21);g.textAlign='left';}
+function beginGeneration(){result=runner.step();fleet=result.evaluated.map(p=>Lander.simulate(p.genes,cfg,true));parents=result.ranked.slice(0,2).map(p=>result.evaluated.indexOf(p));duration=Math.max(...fleet.map(f=>f.end.t));elapsed=0;viewTime=0;phase='flying';$('gen').textContent=`${result.generation} / ${cfg.generations}`;$('status').textContent=`Generación ${result.generation}: los pilotos están intentando aterrizar…`;paint();}
+function completeGeneration(){viewTime=duration;paint();const h=result.history[result.history.length-1];history.push({...h});chart();phase='summary';hold=0;$('status').textContent=`Generación ${result.generation}: ${h.success} de ${cfg.population} aterrizaron. ★ son los dos padres elegidos para la siguiente generación. ${result.generation<cfg.generations?'Seleccionando y combinando…':'Experimento terminado.'}`;if(result.generation>=cfg.generations){phase='complete';$('pause').disabled=true;$('start').disabled=false;$('start').textContent='Volver a iniciar';}}
+function loop(t){raf=0;if(paused||phase==='idle'||phase==='complete')return;try{const dt=last===null?0:Math.min(.1,(t-last)/1000);last=t;const speed=Number($('speed').value)||1;if(phase==='flying'){elapsed+=dt*speed;viewTime=Math.min(duration,elapsed/6*duration);paint();if(elapsed>=6)completeGeneration();}else if(phase==='summary'){hold+=dt*speed;if(hold>=1.4)beginGeneration();}if(phase!=='complete')raf=requestAnimationFrame(loop);}catch(e){cancelAnimationFrame(raf);phase='idle';$('failure').textContent='La simulación se interrumpió. Pulsa Reiniciar para intentarlo de nuevo.';$('start').disabled=false;$('pause').disabled=true;console.error(e);}}
+function reset(){cancelAnimationFrame(raf);raf=0;runner=null;result=null;fleet=[];history=[];parents=[];phase='idle';paused=false;elapsed=0;hold=0;last=null;duration=0;viewTime=0;$('start').disabled=false;$('start').textContent='Iniciar';$('pause').disabled=true;$('pause').textContent='Pausar';$('reset').disabled=true;$('gen').textContent='— / '+($('generations').value||20);$('status').textContent='Pulsa Iniciar para ver la primera generación.';$('failure').textContent='';paint();chart();}
+$('start').addEventListener('click',()=>{reset();for(const id of ['population','generations','seed','crossover','mutation']){const v=Number($(id).value);if(!Number.isFinite(v))return;cfg[id]=v;}runner=Lander.create(cfg);$('start').disabled=true;$('pause').disabled=false;$('reset').disabled=false;beginGeneration();raf=requestAnimationFrame(loop);});
+$('pause').addEventListener('click',()=>{paused=!paused;$('pause').textContent=paused?'Continuar':'Pausar';if(paused){cancelAnimationFrame(raf);raf=0;}else{last=null;raf=requestAnimationFrame(loop);}});
+$('reset').addEventListener('click',reset);
+window.addEventListener('resize',()=>{paint();chart();});reset();
+})();
+</script></body></html>
